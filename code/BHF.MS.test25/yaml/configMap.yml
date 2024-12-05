@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test25-configmap
+data:
+  appsettings.Production.json: |-
+    {
+      "ConnectionStrings": {
+        "KeyVaultUri": "#{KeyVaultUri}#",
+        "ManagedIdentityClientId": "#{ManagedIdentityClientId}#"
+      }
+    }

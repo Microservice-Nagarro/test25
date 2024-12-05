@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test25-microservice
+spec:
+  selector:
+    matchLabels:
+      app: test25-microservice
+  template:
+    metadata:
+      labels:
+        app: test25-microservice
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: test25-microservice
+      nodeSelector:
+        "kubernetes.io/os": linux
+      automountServiceAccountToken: false
+      containers:
+      - name: test25-microservice
+        image: #{ContainerReg}#.azurecr.io/bhf.ms.test25:#{BuildRef}#
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 8080
+          periodSeconds: 60
+          timeoutSeconds: 30
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 8080
+          periodSeconds: 60
+          timeoutSeconds: 30
+          failureThreshold: 3
+        volumeMounts:
+        - name: appsettings-volume
+          mountPath: /app/appsettings.Production.json
+          subPath: appsettings.Production.json
+        resources:
+          requests:
+            cpu: 50m
+            memory: 512Mi
+            ephemeral-storage: "2Gi"
+          limits:
+            memory: 512Mi
+            ephemeral-storage: "2Gi"
+      volumes:
+      - name: appsettings-volume
+        configMap:
+          name: test25-configmap
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test25-microservice
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+spec:
+  selector:
+    app: test25-microservice
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
